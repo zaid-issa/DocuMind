@@ -1,7 +1,7 @@
 import pymupdf
 import pytest
 
-from app.services.pdf_extractor import extract_pages
+from app.services.pdf_extractor import CorruptPdfError, NoTextError, extract_pages
 
 
 def make_pdf(path, page_texts):
@@ -30,3 +30,22 @@ def test_extract_pages_returns_one_entry_per_page(tmp_path):
 def test_extract_pages_raises_for_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         extract_pages(tmp_path / "does_not_exist.pdf")
+
+
+def test_extract_pages_raises_for_corrupt_file(tmp_path):
+    fake_pdf = tmp_path / "fake.pdf"
+    fake_pdf.write_bytes(b"this is not a real pdf")
+
+    with pytest.raises(CorruptPdfError):
+        extract_pages(fake_pdf)
+
+
+def test_extract_pages_raises_when_pdf_has_no_text(tmp_path):
+    blank_pdf = tmp_path / "blank.pdf"
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.save(str(blank_pdf))
+    doc.close()
+
+    with pytest.raises(NoTextError):
+        extract_pages(blank_pdf)
